@@ -35,7 +35,12 @@ export function parseCircuit(text: string): Circuit {
       Math.abs(p.y) > 100000 ||
       Math.abs(p.value) > 1e9 ||
       p.value < 0 ||
-      (p.kind === "resistor" && !Number.isFinite(1 / p.value)) ||
+      (["resistor", "potentiometer"].includes(p.kind) &&
+        !Number.isFinite(1 / p.value)) ||
+      (p.wiper !== undefined &&
+        (!Number.isFinite(p.wiper) || p.wiper < 0 || p.wiper > 1)) ||
+      (p.meterMode !== undefined &&
+        !["voltage", "current"].includes(p.meterMode)) ||
       (["resistor", "led", "diode"].includes(p.kind) && p.value === 0) ||
       typeof p.closed !== "boolean" ||
       !wireColors.includes(p.color as (typeof wireColors)[number])

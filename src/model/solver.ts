@@ -29,6 +29,8 @@ export function buildNetlist(circuit: Circuit) {
     }
     if (["switch", "pushbutton"].includes(p.kind) && p.closed)
       uf.join(`${p.id}:a`, `${p.id}:b`);
+    if (p.kind === "potentiometer" && (p.wiper === 0 || p.wiper === 1))
+      uf.join(`${p.id}:w`, `${p.id}:${p.wiper === 0 ? "a" : "b"}`);
   }
   for (const wire of circuit.wires)
     uf.join(endpointKey(wire.from), endpointKey(wire.to));
@@ -71,15 +73,42 @@ export function simulate(circuit: Circuit): Simulation {
   const diagnostic = (level: Diagnostic["level"], message: string) =>
     result.diagnostics.push({ level, message });
   const net = buildNetlist(circuit);
-  const branches = circuit.parts.filter((p) =>
-    ["resistor", "led", "diode", "battery", "supply"].includes(p.kind),
+  const pots = circuit.parts.filter((p) => p.kind === "potentiometer");
+  const currentMeters = circuit.parts.filter(
+    (p) => p.kind === "multimeter" && p.meterMode === "current",
   );
+  const branchPins = new Map<string, string[]>();
+  const potBranches = pots.flatMap((p) => {
+    const position = p.wiper ?? 0.5;
+    return (
+      [
+        ["a", "w", position],
+        ["w", "b", 1 - position],
+      ] as const
+    ).flatMap(([a, b, fraction]) => {
+      if (fraction === 0) return [];
+      const id = `${p.id}:${a}-${b}`;
+      branchPins.set(id, [net[`${p.id}:${a}`], net[`${p.id}:${b}`]]);
+      return [
+        { ...p, id, kind: "resistor" as const, value: p.value * fraction },
+      ];
+    });
+  });
+  const branches = [
+    ...circuit.parts.filter((p) =>
+      ["resistor", "led", "diode", "battery", "supply"].includes(p.kind),
+    ),
+    ...potBranches,
+    ...currentMeters.map((p) => ({ ...p, value: 0 })),
+  ];
   const terminals = (p: Part) =>
+    branchPins.get(p.id) ??
     pins(p)
       .slice(0, 2)
       .map((pin) => net[`${p.id}:${pin.id}`]);
   const sources = branches.filter(
-    (p) => p.kind === "battery" || p.kind === "supply",
+    (p) =>
+      p.kind === "battery" || p.kind === "supply" || p.kind === "multimeter",
   );
   const diodes = branches.filter((p) => ["led", "diode"].includes(p.kind));
   const unsupported = circuit.parts.filter((p) => !meta(p.kind).supported);
@@ -91,21 +120,40 @@ export function simulate(circuit: Circuit): Simulation {
   for (const p of branches)
     if (
       !Number.isFinite(p.value) ||
-      (p.kind === "resistor" && (p.value <= 0 || !Number.isFinite(1 / p.value))) ||
+      (p.kind === "resistor" &&
+        (p.value <= 0 || !Number.isFinite(1 / p.value))) ||
       (["led", "diode"].includes(p.kind) && p.value <= 0)
     )
       diagnostic("error", `${p.label}: invalid component value.`);
+  for (const p of pots) {
+    const position = p.wiper ?? 0.5;
+    if (
+      !Number.isFinite(p.value) ||
+      p.value <= 0 ||
+      !Number.isFinite(1 / p.value) ||
+      !Number.isFinite(position) ||
+      position < 0 ||
+      position > 1
+    )
+      diagnostic(
+        "error",
+        `${p.label}: invalid potentiometer resistance or wiper position.`,
+      );
+  }
   for (const s of sources) {
     const [a, b] = terminals(s);
     if (a === b)
       diagnostic(
         "error",
-        `${s.label}: short circuit across an ideal voltage source. Open the path before running.`,
+        s.kind === "multimeter"
+          ? `${s.label}: ammeter is bypassed by an ideal connection; remove the bypass to measure series current.`
+          : `${s.label}: short circuit across an ideal voltage source. Open the path before running.`,
       );
   }
   if (result.diagnostics.some((d) => d.level === "error"))
     return { ...result, valid: false };
-  if (!sources.length) {
+  const supplies = sources.filter((p) => p.kind !== "multimeter");
+  if (!supplies.length) {
     diagnostic("info", "Add a battery or DC supply to power this circuit.");
     return result;
   }
@@ -123,7 +171,7 @@ export function simulate(circuit: Circuit): Simulation {
     const n = net[`${p.id}:g`];
     if (used.has(n)) refs.set(islands.find(n), n);
   }
-  for (const s of sources) {
+  for (const s of [...supplies, ...currentMeters]) {
     const n = terminals(s)[1];
     if (!refs.has(islands.find(n))) refs.set(islands.find(n), n);
   }
@@ -191,6 +239,11 @@ export function simulate(circuit: Circuit): Simulation {
         "error",
         "Conflicting or redundant ideal voltage sources. Check source polarity and parallel source connections.",
       );
+      if (currentMeters.length)
+        diagnostic(
+          "error",
+          "Current mode is an ideal 0 V series connection. An ammeter across a source shorts it; insert the meter in series with a load.",
+        );
       return { ...result, valid: false };
     }
     const volts = (n: string) => (index.has(n) ? solution![index.get(n)!] : 0);
@@ -244,7 +297,11 @@ export function simulate(circuit: Circuit): Simulation {
           ? `${p.label}: LED is reverse-biased (${voltage.toFixed(2)} V anode to cathode). Reverse its connections.`
           : `${p.label}: forward current is below the illumination threshold; check the open path and the ${p.value} V forward-voltage requirement.`,
       );
-    if (p.kind === "resistor" && voltage * current > 0.25)
+    if (
+      p.kind === "resistor" &&
+      !branchPins.has(p.id) &&
+      voltage * current > 0.25
+    )
       diagnostic(
         "warning",
         `${p.label}: ${(voltage * current).toFixed(2)} W exceeds a typical ¼ W resistor rating.`,
@@ -265,7 +322,28 @@ export function simulate(circuit: Circuit): Simulation {
       power: 0,
     };
   }
-  for (const p of circuit.parts.filter((p) => p.kind === "multimeter")) {
+  for (const p of pots) {
+    const aw = result.readings[`${p.id}:a-w`];
+    const wb = result.readings[`${p.id}:w-b`];
+    const ia = aw?.current ?? NaN;
+    const ib = wb ? -wb.current : NaN;
+    result.readings[p.id] = {
+      voltage: volts(net[`${p.id}:a`]) - volts(net[`${p.id}:b`]),
+      current: ia,
+      power: (aw?.power ?? 0) + (wb?.power ?? 0),
+      terminalCurrents: { a: ia, b: ib, w: -ia - ib },
+    };
+    delete result.readings[`${p.id}:a-w`];
+    delete result.readings[`${p.id}:w-b`];
+    if (p.wiper === 0 || p.wiper === 1)
+      diagnostic(
+        "info",
+        `${p.label}: wiper is at an end stop; current divides indeterminately between the coincident end and wiper pins.`,
+      );
+  }
+  for (const p of circuit.parts.filter(
+    (p) => p.kind === "multimeter" && p.meterMode !== "current",
+  )) {
     const [a, b] = terminals(p);
     if (used.has(a) && used.has(b) && islands.find(a) === islands.find(b))
       result.readings[p.id] = {
@@ -279,7 +357,7 @@ export function simulate(circuit: Circuit): Simulation {
         p.label + ": connect both probes within the same electrical island.",
       );
   }
-  if (sources.every((p) => Math.abs(result.readings[p.id].current) < 1e-8))
+  if (supplies.every((p) => Math.abs(result.readings[p.id].current) < 1e-8))
     diagnostic(
       "warning",
       "Open circuit: no current flows from the sources. Check connections, switches, and LED polarity.",

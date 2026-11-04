@@ -90,7 +90,7 @@ export function Inspector({
             </label>
             {meta(selectedPart.kind).unit && (
               <label className="field-label">
-                {selectedPart.kind === "resistor"
+                {["resistor", "potentiometer"].includes(selectedPart.kind)
                   ? "Resistance"
                   : selectedPart.kind === "led" || selectedPart.kind === "diode"
                     ? "Forward voltage"
@@ -103,7 +103,9 @@ export function Inspector({
                     type="number"
                     aria-label="Component value"
                     min={
-                      ["resistor", "led", "diode"].includes(selectedPart.kind)
+                      ["resistor", "potentiometer", "led", "diode"].includes(
+                        selectedPart.kind,
+                      )
                         ? 0.001
                         : 0
                     }
@@ -117,10 +119,16 @@ export function Inspector({
                         Number.isFinite(value) &&
                         value >= 0 &&
                         value <= 1e9 &&
-                        (selectedPart.kind !== "resistor" || Number.isFinite(1 / value)) &&
-                        (!["resistor", "led", "diode"].includes(
+                        (!["resistor", "potentiometer"].includes(
                           selectedPart.kind,
                         ) ||
+                          Number.isFinite(1 / value)) &&
+                        (![
+                          "resistor",
+                          "potentiometer",
+                          "led",
+                          "diode",
+                        ].includes(selectedPart.kind) ||
                           value > 0)
                       )
                         updatePart(selectedPart, { value });
@@ -132,6 +140,42 @@ export function Inspector({
                   />
                   <span>{meta(selectedPart.kind).unit}</span>
                 </div>
+              </label>
+            )}
+            {selectedPart.kind === "potentiometer" && (
+              <label className="field-label">
+                Wiper position: {Math.round((selectedPart.wiper ?? 0.5) * 100)}%
+                <input
+                  aria-label="Wiper position"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={(selectedPart.wiper ?? 0.5) * 100}
+                  onChange={(e) =>
+                    updatePart(selectedPart, {
+                      wiper: Number(e.target.value) / 100,
+                    })
+                  }
+                />
+                <span>0% at end 1; 100% at end 2.</span>
+              </label>
+            )}
+            {selectedPart.kind === "multimeter" && (
+              <label className="field-label">
+                Measurement mode
+                <select
+                  aria-label="Measurement mode"
+                  value={selectedPart.meterMode ?? "voltage"}
+                  onChange={(e) =>
+                    updatePart(selectedPart, {
+                      meterMode: e.target.value as "voltage" | "current",
+                    })
+                  }
+                >
+                  <option value="voltage">DC voltage (parallel)</option>
+                  <option value="current">DC current (series)</option>
+                </select>
               </label>
             )}
             {selectedPart.kind === "led" && (
@@ -169,7 +213,9 @@ export function Inspector({
                 }}
                 onPointerUp={() => toggle(selectedPart.id, false)}
                 onPointerCancel={() => toggle(selectedPart.id, false)}
-                onBlur={() => { if (selectedPart.closed) toggle(selectedPart.id, false); }}
+                onBlur={() => {
+                  if (selectedPart.closed) toggle(selectedPart.id, false);
+                }}
                 onKeyDown={(e) => {
                   if ((e.key === " " || e.key === "Enter") && !e.repeat)
                     toggle(selectedPart.id, true);
@@ -229,7 +275,11 @@ export function Inspector({
                 </dd>
               </div>
               <div>
-                <dt>Current</dt>
+                <dt>
+                  {selectedPart.kind === "potentiometer"
+                    ? "Current into end 1"
+                    : "Current"}
+                </dt>
                 <dd>
                   {selectedReading
                     ? formatValue(selectedReading.current, "A")
@@ -244,19 +294,39 @@ export function Inspector({
                     : "—"}
                 </dd>
               </div>
+              {selectedReading?.terminalCurrents && (
+                <>
+                  <div>
+                    <dt>Current into wiper</dt>
+                    <dd>
+                      {formatValue(selectedReading.terminalCurrents.w, "A")}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Current into end 2</dt>
+                    <dd>
+                      {formatValue(selectedReading.terminalCurrents.b, "A")}
+                    </dd>
+                  </div>
+                </>
+              )}
             </dl>
             <p className="inspector-note">
               {!meta(selectedPart.kind).supported
                 ? "This component can be placed and wired. Its electrical model is planned; pins are treated as open."
                 : selectedPart.kind === "multimeter"
-                  ? "Ideal DC voltage measurement across + and −. No current is drawn."
-                  : selectedPart.kind === "resistor"
-                    ? "Ideal resistor. Power warnings assume a ¼ W rating."
-                    : selectedPart.kind === "led"
-                      ? "Simplified diode: forward threshold + 10 Ω. Use a series resistor."
-                      : selectedPart.kind === "breadboard"
-                        ? "a–e and f–j form separate five-hole columns. Each power rail is continuous."
-                        : "Steady-state DC model. Readings update while the simulation runs."}
+                  ? selectedPart.meterMode === "current"
+                    ? "Ideal zero-voltage ammeter. Insert in series; across a supply it creates a short circuit. Positive current enters the + probe."
+                    : "Ideal DC voltage measurement across + and −. No current is drawn."
+                  : selectedPart.kind === "potentiometer"
+                    ? "Two resistive sections follow the wiper. Loading the wiper changes the divider voltage. At an end stop, currents through coincident pins are unavailable."
+                    : selectedPart.kind === "resistor"
+                      ? "Ideal resistor. Power warnings assume a ¼ W rating."
+                      : selectedPart.kind === "led"
+                        ? "Simplified diode: forward threshold + 10 Ω. Use a series resistor."
+                        : selectedPart.kind === "breadboard"
+                          ? "a–e and f–j form separate five-hole columns. Each power rail is continuous."
+                          : "Steady-state DC model. Readings update while the simulation runs."}
             </p>
           </div>
           <div className="inspector-section">

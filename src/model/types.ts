@@ -26,6 +26,8 @@ export interface Part {
   value: number;
   closed: boolean;
   color: string;
+  wiper?: number;
+  meterMode?: "voltage" | "current";
 }
 export interface Endpoint {
   part: string;
@@ -64,6 +66,7 @@ export interface Reading {
   current: number;
   power: number;
   lit?: boolean;
+  terminalCurrents?: Record<string, number>;
 }
 export interface Diagnostic {
   level: "info" | "warning" | "error";

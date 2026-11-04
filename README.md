@@ -44,7 +44,11 @@ Voltage, current, and power readings are computed from the solved network. Absol
 
 Parts labeled unsupported or planned have no working electrical model. They must not be treated as simulated devices. In particular, microcontroller firmware execution, digital peripherals, capacitor transients, motor dynamics, and buzzer audio are not implemented. No Arduino or ESP32 emulation is claimed.
 
-The voltmeter is an ideal differential DC voltage probe. An ammeter/ohmmeter mode and inferred current through an ideal closed switch are not implemented. Component resistance is editable; branch current and power are available for the modeled resistive and diode devices. Potentiometer wipers, capacitor transients, motors, buzzers, and logic gates remain placement-only. Future work includes ESP32, sensors, servos, displays, relays, transistors, and firmware integration after the core milestones.
+The multimeter has two modes: an ideal differential DC voltage probe wired in parallel, and an ideal zero-voltage ammeter inserted in series. Positive current enters the + probe. Putting current mode across a source shorts it and stops the solve with an explanation. A bypassed ammeter has indeterminate branch current and is rejected. Older saved meters default to voltage mode. Ohmmeter mode and inferred current through an ideal closed switch are not implemented.
+
+Potentiometers use two linear resistive sections with adjustable total resistance and wiper position. At 0%, the wiper joins end 1; at 100%, it joins end 2. Older saved potentiometers default to 50%. Wiper loading affects the calculated voltage. At an end stop, the separate currents through coincident pins are unavailable; their total is still determined by the network. This ideal model has no mechanical or thermal behavior. Capacitors, motors, buzzers, and logic gates remain placement-only. Future work includes ESP32, sensors, servos, displays, relays, transistors, and firmware integration after the core milestones.
+
+To try a divider, wire a 10 V source across a 10 kΩ potentiometer's end pins and a voltage-mode meter from wiper to end 2. At 50% it reads 5 V with no load; at 75% it reads 2.5 V. To measure current, insert a current-mode meter in series with a 10 V source and 1 kΩ resistor; the calculated current is 10 mA.
 
 Browser storage can be cleared or unavailable. Export important projects to JSON. This educational model is not a substitute for device datasheets or hardware verification.
 
@@ -58,8 +62,8 @@ The design follows Hallmark's Console app-screen direction: graphite surfaces, a
 
 ## Verified milestone
 
-On November 4, 2026, `npm test` passed 19 tests, including all ten requested numerical, connectivity, and save/load scenarios; `npm run build` passed TypeScript checking and the production bundle build.
+On November 4, 2026, `npm test` passed 27 tests, including all ten requested scenarios plus potentiometer loading/end stops, ammeter polarity/miswiring, and persistence compatibility. `npm run build` checks TypeScript and creates the production bundle.
 
 Chrome browser walkthroughs verified assembly from a blank canvas, pin wiring and calculated current, live switches, pause/reset, wire deletion and undo/redo, save/reload, library drag/drop, free component movement, keyboard rotation and duplication/deletion, zoom/pan, and breadboard node highlighting. Hallmark's final responsive render checks reported zero failures and zero warnings, with one documented exception for large draggable component buttons and two answered consistency checks.
 
-Delivered scope: Milestone 1, DC simulation foundations, and working breadboard/LED/voltmeter features. Full transient simulation, firmware emulation, 3D inspection, motor animation, arbitrary editable wire bends, and multimeter current/resistance modes remain planned. Wires use automatic orthogonal paths. Ideal-wire current-flow animations are deliberately absent because the current through an arbitrary ideal-wire network is not determined by this solver.
+Delivered scope: Milestone 1, DC simulation foundations, and working breadboard, LED, potentiometer, voltage and current instrument features. Full transient simulation, firmware emulation, 3D inspection, motor animation, arbitrary editable wire bends, and multimeter resistance mode remain planned. Wires use automatic orthogonal paths. Ideal-wire current-flow animations are deliberately absent because the current through an arbitrary ideal-wire network is not determined by this solver.

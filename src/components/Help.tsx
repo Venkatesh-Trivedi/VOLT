@@ -77,10 +77,10 @@ export function Help({ onClose }: { onClose: () => void }) {
           </div>
         </dl>
         <p className="help-limit">
-          DC resistors, sources, ideal switches, and simplified diodes are
-          modeled. Planned parts have open pins. Voltmeters measure within one
-          electrical island. Reset clears analysis, and New creates an undoable
-          blank circuit.
+          DC resistors, potentiometers, sources, ideal switches, and simplified
+          diodes are modeled. Planned parts have open pins. Voltmeters measure
+          within one electrical island. Current mode must be wired in series.
+          Reset clears analysis, and New creates an undoable blank circuit.
         </p>
         <button className="button primary" onClick={() => onClose()}>
           Back to the workbench

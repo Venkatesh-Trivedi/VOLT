@@ -114,6 +114,24 @@ export function PartSymbol({
         </text>
       </g>
     );
+  if (p.kind === "potentiometer")
+    return (
+      <g>
+        <path d="M0 35H25M75 35H100M50 70V48" className="lead" />
+        <rect
+          x="25"
+          y="24"
+          width="50"
+          height="22"
+          rx="3"
+          className="resistor-body"
+        />
+        <path d={`M${25 + (p.wiper ?? 0.5) * 50} 39L50 55`} className="lead" />
+        <text x="50" y="16" className="part-value">
+          {formatValue(p.value, "Ω", 0)} / {Math.round((p.wiper ?? 0.5) * 100)}%
+        </text>
+      </g>
+    );
   if (p.kind === "led")
     return (
       <g
@@ -209,7 +227,13 @@ export function PartSymbol({
           className="instrument-screen"
         />
         <text x="50" y="29" className="meter-value">
-          {reading ? formatValue(reading.voltage, "V", 2) : "DC V"}
+          {reading
+            ? p.meterMode === "current"
+              ? formatValue(reading.current, "A", 2)
+              : formatValue(reading.voltage, "V", 2)
+            : p.meterMode === "current"
+              ? "DC A"
+              : "DC V"}
         </text>
         <circle cx="50" cy="49" r="7" className="meter-dial" />
       </g>

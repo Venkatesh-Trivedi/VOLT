@@ -82,6 +82,25 @@ export function Workbench({
     origin: Point;
   } | null>(null);
   const [mouse, setMouse] = useState<Point>({ x: 0, y: 0 });
+  useEffect(() => {
+    const canvas = svg.current!;
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      if (event.deltaY === 0) return;
+      const next = Math.min(2, Math.max(0.15, zoom * (event.deltaY < 0 ? 1.1 : 0.9)));
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      setPan({
+        x: x - ((x - pan.x) * next) / zoom,
+        y: y - ((y - pan.y) * next) / zoom,
+      });
+      setZoom(next);
+    };
+    // React wheel listeners are passive and cannot cancel browser pinch/Ctrl-wheel zoom.
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", onWheel);
+  }, [zoom, pan]);
   const point = (clientX: number, clientY: number): Point => {
     const rect = svg.current!.getBoundingClientRect();
     return {
@@ -285,20 +304,6 @@ export function Workbench({
           const p = createPart(kind, pos.x, pos.y, circuit.parts);
           commit({ ...circuit, parts: [...circuit.parts, p] });
           select({ type: "part", id: p.id });
-        }}
-        onWheel={(e) => {
-          const next = Math.min(
-            2,
-            Math.max(0.15, zoom * (e.deltaY < 0 ? 1.1 : 0.9)),
-          );
-          const rect = svg.current!.getBoundingClientRect();
-          const x = e.clientX - rect.left,
-            y = e.clientY - rect.top;
-          setPan({
-            x: x - ((x - pan.x) * next) / zoom,
-            y: y - ((y - pan.y) * next) / zoom,
-          });
-          setZoom(next);
         }}
         onPointerDown={(e) => {
           if (e.target === svg.current || tool === "pan" || e.button === 1) {

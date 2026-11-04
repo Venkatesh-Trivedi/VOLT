@@ -36,6 +36,30 @@ try {
     bubbles: true, cancelable: true, ctrlKey: true, deltaY: -100,
   }))), true, "Browser zoom outside the canvas must remain available");
   console.log("Canvas wheel and Ctrl/pinch-wheel zoom regression passed.");
+  await page.click('[aria-label="Reset view"]');
+  const transform = () => page.$eval('.circuit-canvas > g', el => el.getAttribute('transform'));
+  const initialPan = await transform();
+  const canvas = await (await page.$('.circuit-canvas')).boundingBox();
+  await page.mouse.move(canvas.x + 20, canvas.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(canvas.x + 80, canvas.y + 60, { steps: 8 });
+  await page.mouse.up();
+  assert.notEqual(await transform(), initialPan, 'Dragging empty canvas must pan without the hand tool');
+  const releasedPan = await transform();
+  await page.mouse.move(canvas.x + 100, canvas.y + 70);
+  assert.equal(await transform(), releasedPan, 'Panning must stop on release');
+
+  const partSelector = 'g[aria-label="R1 Resistor; select to edit"]';
+  const partTransform = () => page.$eval(partSelector, el => el.parentElement.getAttribute('transform'));
+  const initialPart = await partTransform();
+  const part = await (await page.$(partSelector)).boundingBox();
+  await page.mouse.move(part.x + part.width / 2, part.y + part.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(part.x + part.width / 2 + 35, part.y + part.height / 2 + 25, { steps: 8 });
+  await page.mouse.up();
+  assert.notEqual(await partTransform(), initialPart, 'Dragging a component must still move it');
+  assert.equal(await transform(), releasedPan, 'Dragging a component must not pan the view');
+  console.log('Background panning, release, and component dragging regression passed.');
 } finally {
   await browser.close();
 }

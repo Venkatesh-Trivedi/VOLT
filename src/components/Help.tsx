@@ -69,7 +69,7 @@ export function Help({ onClose }: { onClose: () => void }) {
           </div>
           <div>
             <dt>Zoom / pan</dt>
-            <dd>Scroll / hand tool</dd>
+            <dd>Scroll / drag empty space</dd>
           </div>
           <div>
             <dt>Cancel a wire</dt>

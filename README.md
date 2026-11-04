@@ -28,7 +28,7 @@ npm run preview
 - Save stores the circuit in this browser. Export and import JSON to keep a portable copy. Project files contain the actual components, pin connections, and wire colors.
 - Undo and redo restore edits. The initial circuit is an editable example; create a new project for an empty workbench.
 
-Shortcuts: **R** rotates the selected part, **Delete** removes the selection, **Ctrl/Cmd+D** duplicates, **Ctrl/Cmd+Z** undoes, **Ctrl/Cmd+Shift+Z** redoes, **Ctrl/Cmd+S** saves, and **Escape** cancels a pending wire. Use the hand tool to pan and the mouse wheel or zoom controls to zoom.
+Shortcuts: **R** rotates the selected part, **Delete** removes the selection, **Ctrl/Cmd+D** duplicates, **Ctrl/Cmd+Z** undoes, **Ctrl/Cmd+Shift+Z** redoes, **Ctrl/Cmd+S** saves, and **Escape** cancels a pending wire. Drag empty workspace or use the hand tool to pan; use the mouse wheel or zoom controls to zoom.
 
 Dropping a component pin near a breadboard hole snaps that contact and creates a visible electrical connection. Other leads exactly aligned with board holes also connect; wire unaligned leads explicitly. Mechanical collisions and lead deformation are not modeled. Select a hole to highlight the contacts sharing its electrical node.
 

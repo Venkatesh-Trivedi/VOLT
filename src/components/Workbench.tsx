@@ -306,17 +306,16 @@ export function Workbench({
           select({ type: "part", id: p.id });
         }}
         onPointerDown={(e) => {
-          if (e.target === svg.current || tool === "pan" || e.button === 1) {
-            if (tool === "pan" || e.button === 1) {
-              e.currentTarget.setPointerCapture(e.pointerId);
-              setPanning({
-                start: { x: e.clientX, y: e.clientY },
-                origin: pan,
-              });
-            } else {
-              select(null);
-              setPending(null);
-            }
+          if (e.button !== 0 && e.button !== 1) return;
+          if (e.target !== svg.current && tool !== "pan" && e.button !== 1) return;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          setPanning({
+            start: { x: e.clientX, y: e.clientY },
+            origin: pan,
+          });
+          if (e.target === svg.current) {
+            select(null);
+            setPending(null);
           }
         }}
         onPointerMove={(e) => {
@@ -593,7 +592,7 @@ export function Workbench({
           ) : (
             <>
               <MousePointer2 size={14} />
-              Drag to move. Click two pins to connect.
+              Drag empty space to pan. Click two pins to connect.
             </>
           )}
         </div>

@@ -1,0 +1,15 @@
+{
+  "scanned": "2026-11-04",
+  "findings": {
+    "existingProject": "D:/BioScan was empty at initial inspection",
+    "framework": "New React and TypeScript app with Vite",
+    "material": "The interactive circuit canvas is the product; no marketing screenshots or photography required",
+    "audience": "Electronics learners and engineers",
+    "use": "Place components, wire pins, and inspect calculated DC behavior",
+    "tone": "Technical and utilitarian"
+  },
+  "preserve": [],
+  "introduce": ["Console palette", "SVG workbench", "searchable component drawer", "properties and instrument inspector"],
+  "scope": "app",
+  "theme": "console"
+}

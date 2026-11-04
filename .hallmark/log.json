@@ -1,0 +1,20 @@
+[
+  {
+    "date": "2026-11-04",
+    "scope": "app",
+    "shape": "app screen",
+    "theme": "console",
+    "axes": ["graphite", "operator amber", "instrument blue", "direct manipulation"],
+    "nav": "Workbench command bar",
+    "footer": "Canvas navigation and editor status",
+    "imagery": "Actual interactive SVG circuit diagram",
+    "photos": [],
+    "entry": "VOLTAGE electronics laboratory",
+    "fingerprint": ["component drawer", "free canvas", "inspector", "DC instruments"],
+    "sections": ["Commands", "Component library", "Workbench", "Properties", "Diagnostics"],
+    "signature": "Individually addressable breadboard contacts feeding the real circuit netlist",
+    "waived": ["39b: draggable component previews use large object hit targets"],
+    "prompt": "Build Milestone 1 and electrical simulation foundations for PROJECT VOLTAGE",
+    "verification": "19 automated tests pass; production build passes; Chrome interaction walkthroughs pass; Hallmark render: 0 FAIL, 0 WARN, 1 WAIVED, 2 ANSWERED; desktop screenshot reviewed"
+  }
+]

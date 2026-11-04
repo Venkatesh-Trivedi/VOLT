@@ -1,0 +1,5 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.hallmark/shots/
+.hallmark/salt

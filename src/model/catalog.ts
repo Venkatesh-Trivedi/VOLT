@@ -124,20 +124,20 @@ export const catalog: CatalogItem[] = [
     kind: "motor",
     name: "DC motor",
     category: "Outputs",
-    description: "Motor model planned",
+    description: "Reversible DC motor with live rotation",
     value: 6,
     unit: "V",
-    supported: false,
+    supported: true,
     prefix: "M",
   },
   {
     kind: "buzzer",
     name: "Buzzer",
     category: "Outputs",
-    description: "Audio model planned",
+    description: "Active DC buzzer with optional sound",
     value: 5,
     unit: "V",
-    supported: false,
+    supported: true,
     prefix: "BZ",
   },
   {
@@ -162,6 +162,31 @@ export const catalog: CatalogItem[] = [
   },
 ];
 export const meta = (kind: Kind) => catalog.find((p) => p.kind === kind)!;
+
+export function motorAndBuzzerCircuit(): Circuit {
+  const supply = { ...createPart("supply", 300, 360), id: "supply", value: 6 };
+  const sw = { ...createPart("switch", 300, 70), id: "switch", closed: true };
+  const motor = { ...createPart("motor", 550, 70), id: "motor" };
+  const buzzer = { ...createPart("buzzer", 550, 270), id: "buzzer" };
+  const wires = [
+    ["supply", "p", "switch", "a", "coral"],
+    ["switch", "b", "motor", "a", "coral"],
+    ["switch", "b", "buzzer", "a", "amber"],
+    ["motor", "b", "supply", "n", "blue"],
+    ["buzzer", "b", "supply", "n", "mint"],
+  ].map(([from, fromPin, to, toPin, color], index) => ({
+    id: `wire-${index}`,
+    from: { part: from, pin: fromPin },
+    to: { part: to, pin: toPin },
+    color,
+  }));
+  return {
+    version: 1,
+    name: "Spin and buzz",
+    parts: [supply, sw, motor, buzzer],
+    wires,
+  };
+}
 export function createPart(
   kind: Kind,
   x: number,
@@ -247,17 +272,21 @@ export function pins(part: Part): Pin[] {
   return [
     {
       id: "a",
-      label: ["led", "diode", "multimeter"].includes(part.kind)
+      label: ["led", "diode"].includes(part.kind)
         ? "Anode / +"
-        : "1",
+        : part.kind === "buzzer"
+          ? "+"
+          : "1",
       x: 0,
       y: 35,
     },
     {
       id: "b",
-      label: ["led", "diode", "multimeter"].includes(part.kind)
+      label: ["led", "diode"].includes(part.kind)
         ? "Cathode / −"
-        : "2",
+        : part.kind === "buzzer"
+          ? "−"
+          : "2",
       x: 100,
       y: 35,
     },

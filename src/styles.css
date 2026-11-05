@@ -30,3 +30,7 @@ html{scrollbar-color:var(--color-border) var(--color-bg)}
 @media(max-width:760px){.library-footer{position:static}}
 
 .selection-actions{top:auto;bottom:65px;left:var(--space-16);transform:none}
+.motor-disc{fill:var(--color-metal-dark)}
+.motor-rotor{transform-box:fill-box;transform-origin:center;animation-name:voltage-spin;animation-timing-function:linear;animation-iteration-count:infinite}
+.buzzer-waves{fill:none;stroke:var(--color-accent);stroke-width:2;stroke-linecap:round;pointer-events:none}
+@keyframes voltage-spin{to{transform:rotate(360deg)}}

@@ -27,7 +27,12 @@ import {
   CircuitBoard,
   Grip,
 } from "lucide-react";
-import { catalog, createPart, starterCircuit } from "./model/catalog";
+import {
+  catalog,
+  createPart,
+  motorAndBuzzerCircuit,
+  starterCircuit,
+} from "./model/catalog";
 import { loadCircuit, parseCircuit, saveCircuit } from "./model/persistence";
 import { buildNetlist, simulate } from "./model/solver";
 import { useCircuitHistory } from "./model/history";
@@ -45,6 +50,7 @@ import { Inspector } from "./components/Inspector";
 import { Help } from "./components/Help";
 import { Results } from "./components/Results";
 import { LibraryPreview } from "./components/LibraryPreview";
+import { BuzzerAudio } from "./components/BuzzerAudio";
 const categories: Category[] = [
   "All parts",
   "Basics",
@@ -89,6 +95,7 @@ export default function App() {
     () => new URLSearchParams(location.search).get("q") ?? "",
   );
   const [running, setRunning] = useState(false);
+  const [exampleRevision, setExampleRevision] = useState(0);
   const [paused, setPaused] = useState<{
     circuit: Circuit;
     result: Simulation;
@@ -209,6 +216,16 @@ export default function App() {
     setSelection(null);
     setPending(null);
     setActivePin(null);
+  }
+  function loadExample(example: Circuit) {
+    setPaused(null);
+    commit(example);
+    setExampleRevision((revision) => revision + 1);
+    setRunning(false);
+    setSelection(null);
+    setPending(null);
+    setActivePin(null);
+    setNotice(`${example.name} loaded. Undo restores your previous circuit.`);
   }
   function onPin(endpoint: Endpoint) {
     setActivePin(endpoint);
@@ -460,6 +477,17 @@ export default function App() {
             )}
             {running ? "Pause" : "Run simulation"}
           </button>
+          {circuit.parts.some((p) => p.kind === "buzzer") && (
+            <BuzzerAudio
+              buzzing={
+                !!liveResult?.valid &&
+                Object.values(liveResult.readings).some(
+                  (reading) => reading.buzzing,
+                )
+              }
+              onError={setNotice}
+            />
+          )}
         </div>
       </div>
       <main className="studio-layout">
@@ -564,25 +592,18 @@ export default function App() {
             <BookOpen size={17} />
             <div>
               <strong>Learn by building</strong>
-              <button
-                onClick={() => {
-                  setPaused(null);
-                  commit(starterCircuit());
-                  setRunning(false);
-                  setPending(null);
-                  setActivePin(null);
-                  setNotice(
-                    "Editable First light example loaded. Undo restores your previous circuit.",
-                  );
-                }}
-              >
+              <button onClick={() => loadExample(starterCircuit())}>
                 Load LED example
+              </button>
+              <button onClick={() => loadExample(motorAndBuzzerCircuit())}>
+                Load Spin and buzz
               </button>
             </div>
           </div>
         </aside>
         <div className="center-panel">
           <Workbench
+            key={exampleRevision}
             circuit={circuit}
             commit={commit}
             selection={selection}

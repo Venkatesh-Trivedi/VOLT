@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createPart, starterCircuit } from "../src/model/catalog.ts";
+import {
+  createPart,
+  motorAndBuzzerCircuit,
+  starterCircuit,
+} from "../src/model/catalog.ts";
 import { buildNetlist, simulate } from "../src/model/solver.ts";
 import {
   loadCircuit,
@@ -32,6 +36,41 @@ const close = (actual: number, expected: number, tolerance = 1e-8) =>
     Math.abs(actual - expected) < tolerance,
     `${actual} != ${expected}`,
   );
+
+test("Spin and buzz outputs load the supply and stop when the switch opens", () => {
+  const c = parseCircuit(JSON.stringify(motorAndBuzzerCircuit()));
+  const on = simulate(c);
+  assert.equal(on.valid, true);
+  close(on.readings.motor.current, 0.05);
+  close(on.readings.buzzer.current, 0.006);
+  close(on.readings.supply.current, -0.056);
+  close(on.readings.motor.motorSpeed!, 1);
+  assert.equal(on.readings.buzzer.buzzing, true);
+
+  c.parts.find((p) => p.kind === "switch")!.closed = false;
+  const off = simulate(c);
+  close(off.readings.motor.motorSpeed!, 0);
+  close(off.readings.supply.current, 0);
+  assert.equal(off.readings.buzzer.buzzing, false);
+});
+
+test("motor speed follows voltage and polarity, buzzer needs forward voltage", () => {
+  const c = motorAndBuzzerCircuit();
+  c.parts.find((p) => p.kind === "supply")!.value = 3;
+  const low = simulate(c);
+  close(low.readings.motor.motorSpeed!, 0.5);
+  assert.equal(low.readings.buzzer.buzzing, false);
+
+  c.parts.find((p) => p.kind === "supply")!.value = 6;
+  for (const w of c.wires)
+    for (const end of [w.from, w.to]) {
+      if (end.part === "motor" || end.part === "buzzer")
+        end.pin = end.pin === "a" ? "b" : "a";
+    }
+  const reversed = simulate(c);
+  close(reversed.readings.motor.motorSpeed!, -1);
+  assert.equal(reversed.readings.buzzer.buzzing, false);
+});
 function resistorLoop() {
   return circuit(
     [part("battery", "B", 10), part("resistor", "R", 1000)],

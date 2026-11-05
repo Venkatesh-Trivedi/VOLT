@@ -67,6 +67,8 @@ export interface Reading {
   current: number;
   power: number;
   lit?: boolean;
+  motorSpeed?: number;
+  buzzing?: boolean;
   terminalCurrents?: Record<string, number>;
 }
 export interface Diagnostic {

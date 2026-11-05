@@ -61,6 +61,13 @@ function linearSolve(matrix: number[][], rhs: number[]): number[] | null {
   const solution = a.map((row) => row[n]);
   return solution.every(Number.isFinite) ? solution : null;
 }
+function loadResistance(part: Part) {
+  if (part.kind === "resistor") return part.value;
+  // shortcut: fixed DC loads, add electromechanical and active buzzer models for transient behavior.
+  if (part.kind === "motor") return 120;
+  if (part.kind === "buzzer") return 1000;
+}
+
 export function simulate(circuit: Circuit): Simulation {
   const result: Simulation = {
     valid: true,
@@ -96,7 +103,15 @@ export function simulate(circuit: Circuit): Simulation {
   });
   const branches = [
     ...circuit.parts.filter((p) =>
-      ["resistor", "led", "diode", "battery", "supply"].includes(p.kind),
+      [
+        "resistor",
+        "led",
+        "diode",
+        "battery",
+        "supply",
+        "motor",
+        "buzzer",
+      ].includes(p.kind),
     ),
     ...potBranches,
     ...currentMeters.map((p) => ({ ...p, value: 0 })),
@@ -111,6 +126,9 @@ export function simulate(circuit: Circuit): Simulation {
       p.kind === "battery" || p.kind === "supply" || p.kind === "multimeter",
   );
   const diodes = branches.filter((p) => ["led", "diode"].includes(p.kind));
+  const outputs = branches.filter(
+    (p) => p.kind === "motor" || p.kind === "buzzer",
+  );
   const unsupported = circuit.parts.filter((p) => !meta(p.kind).supported);
   for (const p of unsupported)
     diagnostic(
@@ -122,7 +140,7 @@ export function simulate(circuit: Circuit): Simulation {
       !Number.isFinite(p.value) ||
       (p.kind === "resistor" &&
         (p.value <= 0 || !Number.isFinite(1 / p.value))) ||
-      (["led", "diode"].includes(p.kind) && p.value <= 0)
+      (["led", "diode", "motor", "buzzer"].includes(p.kind) && p.value <= 0)
     )
       diagnostic("error", `${p.label}: invalid component value.`);
   for (const p of pots) {
@@ -178,7 +196,7 @@ export function simulate(circuit: Circuit): Simulation {
       continue;
     }
     if (
-      [...diodes, ...currentMeters, ...unsupported].some((p) =>
+      [...diodes, ...currentMeters, ...outputs, ...unsupported].some((p) =>
         pins(p).some((pin) => touchesProbeIsland(net[`${p.id}:${pin.id}`])),
       )
     ) {
@@ -278,10 +296,11 @@ export function simulate(circuit: Circuit): Simulation {
       const [an, bn] = terminals(p),
         a = index.get(an),
         b = index.get(bn);
-      if (p.kind === "resistor" || ["led", "diode"].includes(p.kind)) {
+      const resistance = loadResistance(p);
+      if (resistance !== undefined || ["led", "diode"].includes(p.kind)) {
         // Off-state conductance stabilizes floating diode nodes; it is not a physical leakage model.
         const on = ledStates.get(p.id);
-        const g = p.kind === "resistor" ? 1 / p.value : on ? 0.1 : 1e-12;
+        const g = resistance !== undefined ? 1 / resistance : on ? 0.1 : 1e-12;
         add(a, a, g);
         add(b, b, g);
         add(a, b, -g);
@@ -341,7 +360,8 @@ export function simulate(circuit: Circuit): Simulation {
     const [a, b] = terminals(p);
     const voltage = volts(a) - volts(b);
     let current = 0;
-    if (p.kind === "resistor") current = voltage / p.value;
+    const resistance = loadResistance(p);
+    if (resistance !== undefined) current = voltage / resistance;
     else if (["led", "diode"].includes(p.kind))
       current = ledStates.get(p.id) ? Math.max(0, (voltage - p.value) / 10) : 0;
     else current = solution[nodes.length + sources.indexOf(p)];
@@ -350,6 +370,12 @@ export function simulate(circuit: Circuit): Simulation {
       current,
       power: voltage * current,
       ...(["led", "diode"].includes(p.kind) ? { lit: current > 0.0001 } : {}),
+      ...(p.kind === "motor"
+        ? { motorSpeed: Math.max(-1, Math.min(1, voltage / p.value)) }
+        : {}),
+      ...(p.kind === "buzzer"
+        ? { buzzing: voltage > 0 && voltage >= p.value * (1 - 1e-9) }
+        : {}),
     };
     if (p.kind === "led" && current > 0.025)
       diagnostic(

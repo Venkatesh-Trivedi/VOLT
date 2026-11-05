@@ -4,9 +4,11 @@ import { formatValue } from "../model/persistence";
 export function PartSymbol({
   part: p,
   reading,
+  running = false,
 }: {
   part: Part;
   reading?: Reading;
+  running?: boolean;
 }) {
   const { w, h } = dimensions(p.kind);
   if (p.kind === "breadboard")
@@ -254,6 +256,57 @@ export function PartSymbol({
         <path d="M63 24V47" className="diode-band" />
         <text x="50" y="66" className="part-value">
           {p.value} V
+        </text>
+      </g>
+    );
+  if (p.kind === "motor") {
+    const speed = reading?.motorSpeed ?? 0;
+    const percent = Math.round(Math.abs(speed) * 100);
+    return (
+      <g>
+        <path d="M0 35H100" className="lead" />
+        <circle cx="50" cy="35" r="25" className="switch-body" />
+        <g
+          className="motor-rotor"
+          style={
+            percent
+              ? {
+                  animationDuration: `${0.55 / Math.abs(speed)}s`,
+                  animationDirection: speed < 0 ? "reverse" : "normal",
+                  animationPlayState: running ? "running" : "paused",
+                }
+              : undefined
+          }
+        >
+          <circle cx="50" cy="35" r="16" className="motor-disc" />
+          <path d="M50 22V35H63M50 48V35H37" className="lead" />
+        </g>
+        <text x="50" y="76" className="part-value">
+          {percent ? `${speed > 0 ? "CW" : "CCW"} ${percent}%` : "Stopped"}
+        </text>
+      </g>
+    );
+  }
+  if (p.kind === "buzzer")
+    return (
+      <g>
+        <path d="M0 35H100" className="lead" />
+        <circle cx="50" cy="35" r="24" className="switch-body" />
+        <circle cx="50" cy="35" r="7" className="motor-disc" />
+        {running && reading?.buzzing && (
+          <path
+            d="M35 22Q24 35 35 48 M65 22Q76 35 65 48 M28 16Q12 35 28 54 M72 16Q88 35 72 54"
+            className="buzzer-waves"
+          />
+        )}
+        <text x="14" y="57" className="pin-polarity">
+          +
+        </text>
+        <text x="86" y="57" className="pin-polarity">
+          −
+        </text>
+        <text x="50" y="76" className="part-value">
+          {running && reading?.buzzing ? "Active" : "Idle"}
         </text>
       </g>
     );

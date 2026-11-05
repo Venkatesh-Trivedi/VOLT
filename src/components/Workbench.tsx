@@ -467,6 +467,7 @@ export function Workbench({
                   {p.kind !== "breadboard" && (
                     <PartSymbol
                       part={p}
+                      running={running}
                       reading={
                         result?.valid ? result.readings[p.id] : undefined
                       }

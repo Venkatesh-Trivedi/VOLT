@@ -42,13 +42,17 @@ LEDs use a simplified piecewise DC model: a configured forward voltage followed 
 
 Voltage, current, and power readings are computed from the solved network. Absolute node voltages on different isolated islands cannot be compared. Ideal shorts across voltage sources and conflicting/redundant source constraints stop the solve with a diagnostic. Open circuits draw no meaningful source current. The simulation is DC and has no time-domain waveform.
 
-Parts labeled unsupported or planned have no working electrical model. They must not be treated as simulated devices. In particular, microcontroller firmware execution, digital peripherals, capacitor transients, motor dynamics, and buzzer audio are not implemented. No Arduino or ESP32 emulation is claimed.
+Parts labeled planned are placement-only, including capacitors, logic gates, and Arduino. Full transient simulation and firmware emulation remain planned.
 
 Use the multimeter in parallel for DC voltage or in series for DC current. Positive current enters the + probe. Putting current mode across a source shorts it and stops the solve with an explanation. A bypassed ammeter has indeterminate branch current and is rejected. Older saved meters default to voltage mode.
 
 For resistance, disconnect power sources from the measured network, set the meter to **Resistance (unpowered)**, and run the simulation. The meter solves the equivalent resistance of resistors, potentiometers, and ideal switches. A direct connection reads 0 Ω, and an open path reads `OL`. The measurement leaves the normal circuit simulation untouched.
 
-Potentiometers use two linear resistive sections with adjustable total resistance and wiper position. At 0%, the wiper joins end 1; at 100%, it joins end 2. Older saved potentiometers default to 50%. Wiper loading affects the calculated voltage. At an end stop, the separate currents through coincident pins are unavailable; their total is still determined by the network. This ideal model has no mechanical or thermal behavior. Capacitors, motors, buzzers, and logic gates remain placement-only. Future work includes ESP32, sensors, servos, displays, relays, transistors, and firmware integration after the core milestones.
+Potentiometers use two linear resistive sections with adjustable total resistance and wiper position. At 0%, the wiper joins end 1. At 100%, it joins end 2. Older saved potentiometers default to 50%. Wiper loading affects the calculated voltage. At an end stop, the separate currents through coincident pins are unavailable and the network still determines their total.
+
+Choose **Load Spin and buzz** in the component drawer, then click **Run simulation**. Toggle the switch to turn both outputs on or off. **Enable buzzer sound** plays a quiet tone when a buzzer is active. Pause, mute, and opening the switch stop the tone.
+
+The motor uses a fixed 120 Ω electrical load. The rotor shows a relative speed estimate from the terminal voltage and rated voltage, with direction set by polarity. The active buzzer uses a fixed 1 kΩ load and activates at its forward turn-on voltage. Its audio is a 650 Hz sine tone. Both are steady-state models without startup, inertia, back EMF, or thermal effects.
 
 To try a divider, wire a 10 V source across a 10 kΩ potentiometer's end pins and a voltage-mode meter from wiper to end 2. At 50% it reads 5 V with no load; at 75% it reads 2.5 V. To measure current, insert a current-mode meter in series with a 10 V source and 1 kΩ resistor; the calculated current is 10 mA.
 
@@ -68,4 +72,4 @@ On November 4, 2026, `npm test` passed 27 tests, including all ten requested sce
 
 Chrome browser walkthroughs verified assembly from a blank canvas, pin wiring and calculated current, live switches, pause/reset, wire deletion and undo/redo, save/reload, library drag/drop, free component movement, keyboard rotation and duplication/deletion, zoom/pan, and breadboard node highlighting. Hallmark's final responsive render checks reported zero failures and zero warnings, with one documented exception for large draggable component buttons and two answered consistency checks.
 
-Delivered scope: Milestone 1, DC simulation foundations, and working breadboard, LED, potentiometer, voltage, current, and resistance features. Full transient simulation, firmware emulation, 3D inspection, motor animation, and arbitrary editable wire bends remain planned. Wires use automatic orthogonal paths. Ideal-wire current-flow animations are deliberately absent because the current through an arbitrary ideal-wire network is not determined by this solver.
+Delivered scope includes the workbench, breadboard, DC analysis, LEDs, potentiometers, multimeter, animated motors, and buzzer audio. Full transient simulation, firmware emulation, 3D inspection, and editable wire bends remain planned. Wires use automatic orthogonal paths.

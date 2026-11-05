@@ -48,6 +48,11 @@ export function Inspector({
   remove,
   setNotice,
 }: Props) {
+  const positiveValue =
+    selectedPart &&
+    ["resistor", "potentiometer", "led", "diode", "motor", "buzzer"].includes(
+      selectedPart.kind,
+    );
   return (
     <aside className="inspector-panel" aria-label="Properties inspector">
       <div className="panel-heading">
@@ -96,19 +101,17 @@ export function Inspector({
                     ? "Forward voltage"
                     : selectedPart.kind === "capacitor"
                       ? "Capacitance"
-                      : "Voltage / value"}
+                      : selectedPart.kind === "motor"
+                        ? "Rated voltage"
+                        : selectedPart.kind === "buzzer"
+                          ? "Turn-on voltage"
+                          : "Voltage / value"}
                 <div className="unit-field">
                   <input
                     key={`${selectedPart.id}-${selectedPart.value}`}
                     type="number"
                     aria-label="Component value"
-                    min={
-                      ["resistor", "potentiometer", "led", "diode"].includes(
-                        selectedPart.kind,
-                      )
-                        ? 0.001
-                        : 0
-                    }
+                    min={positiveValue ? 0.001 : 0}
                     max="1000000000"
                     step="any"
                     defaultValue={selectedPart.value}
@@ -123,13 +126,7 @@ export function Inspector({
                           selectedPart.kind,
                         ) ||
                           Number.isFinite(1 / value)) &&
-                        (![
-                          "resistor",
-                          "potentiometer",
-                          "led",
-                          "diode",
-                        ].includes(selectedPart.kind) ||
-                          value > 0)
+                        (!positiveValue || value > 0)
                       )
                         updatePart(selectedPart, { value });
                       else {
@@ -340,7 +337,11 @@ export function Inspector({
                         ? "Simplified diode: forward threshold + 10 Ω. Use a series resistor."
                         : selectedPart.kind === "breadboard"
                           ? "a–e and f–j form separate five-hole columns. Each power rail is continuous."
-                          : "Steady-state DC model. Readings update while the simulation runs."}
+                          : selectedPart.kind === "motor"
+                            ? "120 Ω DC load. Rotation speed follows the voltage relative to its rating, and reversing the leads reverses rotation."
+                            : selectedPart.kind === "buzzer"
+                              ? "1 kΩ DC load. The buzzer sounds with correct polarity at or above its turn-on voltage when sound is enabled."
+                              : "Steady-state DC model. Readings update while the simulation runs."}
             </p>
           </div>
           <div className="inspector-section">

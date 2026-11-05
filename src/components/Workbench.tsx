@@ -27,6 +27,7 @@ import type {
 } from "../model/types";
 import { PartSymbol } from "./PartSymbol";
 import { formatValue } from "../model/persistence";
+import { wirePort, wireRoute } from "../model/wireRoute";
 
 type Point = { x: number; y: number };
 type Props = {
@@ -82,12 +83,16 @@ export function Workbench({
     origin: Point;
   } | null>(null);
   const [mouse, setMouse] = useState<Point>({ x: 0, y: 0 });
+  const [hoveredPin, setHoveredPin] = useState<Endpoint | null>(null);
   useEffect(() => {
     const canvas = svg.current!;
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
       if (event.deltaY === 0) return;
-      const next = Math.min(2, Math.max(0.15, zoom * (event.deltaY < 0 ? 1.1 : 0.9)));
+      const next = Math.min(
+        2,
+        Math.max(0.15, zoom * (event.deltaY < 0 ? 1.1 : 0.9)),
+      );
       const rect = canvas.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
@@ -113,11 +118,7 @@ export function Workbench({
   );
   const getPoint = (e: Endpoint) => {
     const p = displayParts.find((p) => p.id === e.part);
-    return p ? pinPosition(p, e.pin) : { x: 0, y: 0 };
-  };
-  const route = (a: Point, b: Point) => {
-    const middle = (a.x + b.x) / 2;
-    return `M${a.x},${a.y} H${middle} V${b.y} H${b.x}`;
+    return p ? wirePort(p, e.pin) : { x: 0, y: 0 };
   };
   function fitView() {
     if (!svg.current || !circuit.parts.length) {
@@ -128,15 +129,22 @@ export function Workbench({
     const rect = svg.current.getBoundingClientRect();
     const bounds = circuit.parts.map((p) => {
       const { w, h } = dimensions(p.kind);
-      const angle = p.rotation * Math.PI / 180;
-      const halfW = (Math.abs(w * Math.cos(angle)) + Math.abs(h * Math.sin(angle))) / 2;
-      const halfH = (Math.abs(w * Math.sin(angle)) + Math.abs(h * Math.cos(angle))) / 2;
-      return { left: p.x + w / 2 - halfW, right: p.x + w / 2 + halfW, top: p.y + h / 2 - halfH, bottom: p.y + h / 2 + halfH };
+      const angle = (p.rotation * Math.PI) / 180;
+      const halfW =
+        (Math.abs(w * Math.cos(angle)) + Math.abs(h * Math.sin(angle))) / 2;
+      const halfH =
+        (Math.abs(w * Math.sin(angle)) + Math.abs(h * Math.cos(angle))) / 2;
+      return {
+        left: p.x + w / 2 - halfW,
+        right: p.x + w / 2 + halfW,
+        top: p.y + h / 2 - halfH,
+        bottom: p.y + h / 2 + halfH,
+      };
     });
-    const minX = Math.min(...bounds.map(p => p.left)) - 35;
-    const minY = Math.min(...bounds.map(p => p.top)) - 55;
-    const maxX = Math.max(...bounds.map(p => p.right)) + 35;
-    const maxY = Math.max(...bounds.map(p => p.bottom)) + 65;
+    const minX = Math.min(...bounds.map((p) => p.left)) - 35;
+    const minY = Math.min(...bounds.map((p) => p.top)) - 55;
+    const maxX = Math.max(...bounds.map((p) => p.right)) + 35;
+    const maxY = Math.max(...bounds.map((p) => p.bottom)) + 65;
     const scale = Math.max(
       0.15,
       Math.min(1, rect.width / (maxX - minX), rect.height / (maxY - minY)),
@@ -307,7 +315,8 @@ export function Workbench({
         }}
         onPointerDown={(e) => {
           if (e.button !== 0 && e.button !== 1) return;
-          if (e.target !== svg.current && tool !== "pan" && e.button !== 1) return;
+          if (e.target !== svg.current && tool !== "pan" && e.button !== 1)
+            return;
           e.currentTarget.setPointerCapture(e.pointerId);
           setPanning({
             start: { x: e.clientX, y: e.clientY },
@@ -370,35 +379,32 @@ export function Workbench({
                 <PartSymbol part={p} />
               </g>
             ))}
-          {circuit.wires.map((w) => (
-            <g
-              key={w.id}
-              className={`wire color-${w.color} ${selection?.id === w.id ? "wire-selected" : ""}`}
-            >
-              <path
-                d={route(getPoint(w.from), getPoint(w.to))}
-                className="wire-shadow"
-              />
-              <path
-                d={route(getPoint(w.from), getPoint(w.to))}
-                className="wire-line"
-              />
-              <path
-                d={route(getPoint(w.from), getPoint(w.to))}
-                className="wire-hit"
-                tabIndex={0}
-                role="button"
-                aria-label={`Wire from ${circuit.parts.find((p) => p.id === w.from.part)?.label} ${w.from.pin} to ${circuit.parts.find((p) => p.id === w.to.part)?.label} ${w.to.pin}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  select({ type: "wire", id: w.id });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") select({ type: "wire", id: w.id });
-                }}
-              />
-            </g>
-          ))}
+          {circuit.wires.map((w) => {
+            const path = wireRoute(getPoint(w.from), getPoint(w.to));
+            return (
+              <g
+                key={w.id}
+                className={`wire color-${w.color} ${selection?.id === w.id ? "wire-selected" : ""}`}
+              >
+                <path d={path} className="wire-casing" />
+                <path d={path} className="wire-line" />
+                <path
+                  d={path}
+                  className="wire-hit"
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Wire from ${circuit.parts.find((p) => p.id === w.from.part)?.label} ${w.from.pin} to ${circuit.parts.find((p) => p.id === w.to.part)?.label} ${w.to.pin}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    select({ type: "wire", id: w.id });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") select({ type: "wire", id: w.id });
+                  }}
+                />
+              </g>
+            );
+          })}
           {displayParts.map((p) => {
             const { w, h } = dimensions(p.kind);
             const selected =
@@ -496,6 +502,10 @@ export function Workbench({
                       role="button"
                       tabIndex={0}
                       aria-label={`${p.label} pin ${pin.label}`}
+                      onPointerEnter={() =>
+                        setHoveredPin({ part: p.id, pin: pin.id })
+                      }
+                      onPointerLeave={() => setHoveredPin(null)}
                       onPointerDown={(e) => e.stopPropagation()}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -542,7 +552,10 @@ export function Workbench({
           })}
           {pending && (
             <path
-              d={route(getPoint(pending), mouse)}
+              d={wireRoute(
+                getPoint(pending),
+                hoveredPin ? getPoint(hoveredPin) : mouse,
+              )}
               className={`wire-preview color-${wireColor}`}
             />
           )}

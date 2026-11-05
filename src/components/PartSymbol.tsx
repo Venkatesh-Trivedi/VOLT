@@ -206,7 +206,9 @@ export function PartSymbol({
         <path d="M42 77V92M94 77V92" className="lead" />
       </g>
     );
-  if (p.kind === "multimeter")
+  if (p.kind === "multimeter") {
+    const mode = p.meterMode ?? "voltage";
+    const unit = { voltage: "V", current: "A", resistance: "Ω" }[mode];
     return (
       <g>
         <path d="M0 35H100" className="lead" />
@@ -228,16 +230,15 @@ export function PartSymbol({
         />
         <text x="50" y="29" className="meter-value">
           {reading
-            ? p.meterMode === "current"
-              ? formatValue(reading.current, "A", 2)
-              : formatValue(reading.voltage, "V", 2)
-            : p.meterMode === "current"
-              ? "DC A"
-              : "DC V"}
+            ? formatValue(reading[mode] ?? NaN, unit)
+            : unit === "Ω"
+              ? unit
+              : `DC ${unit}`}
         </text>
         <circle cx="50" cy="49" r="7" className="meter-dial" />
       </g>
     );
+  }
   if (p.kind === "diode")
     return (
       <g>

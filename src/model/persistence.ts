@@ -40,7 +40,7 @@ export function parseCircuit(text: string): Circuit {
       (p.wiper !== undefined &&
         (!Number.isFinite(p.wiper) || p.wiper < 0 || p.wiper > 1)) ||
       (p.meterMode !== undefined &&
-        !["voltage", "current"].includes(p.meterMode)) ||
+        !["voltage", "current", "resistance"].includes(p.meterMode)) ||
       (["resistor", "led", "diode"].includes(p.kind) && p.value === 0) ||
       typeof p.closed !== "boolean" ||
       !wireColors.includes(p.color as (typeof wireColors)[number])
@@ -80,6 +80,9 @@ export function loadCircuit(): Circuit | null {
   return saved ? parseCircuit(saved) : null;
 }
 export function formatValue(value: number, unit: string, digits = 2) {
+  if (unit === "Ω" && value === Infinity) return "OL";
+  if (unit === "Ω" && value > 0 && value < 1e-6)
+    return `${value.toExponential(digits)} Ω`;
   if (!Number.isFinite(value)) return "—";
   if (Math.abs(value) < 1e-9) return `0 ${unit}`;
   if (Math.abs(value) < 0.001)

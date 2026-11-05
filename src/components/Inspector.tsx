@@ -169,12 +169,13 @@ export function Inspector({
                   value={selectedPart.meterMode ?? "voltage"}
                   onChange={(e) =>
                     updatePart(selectedPart, {
-                      meterMode: e.target.value as "voltage" | "current",
+                      meterMode: e.target.value as Part["meterMode"],
                     })
                   }
                 >
                   <option value="voltage">DC voltage (parallel)</option>
                   <option value="current">DC current (series)</option>
+                  <option value="resistance">Resistance (unpowered)</option>
                 </select>
               </label>
             )}
@@ -266,48 +267,59 @@ export function Inspector({
               Electrical readings <Activity size={13} />
             </h4>
             <dl className="reading-list">
-              <div>
-                <dt>Voltage drop</dt>
-                <dd>
-                  {selectedReading
-                    ? formatValue(selectedReading.voltage, "V")
-                    : "—"}
-                </dd>
-              </div>
-              <div>
-                <dt>
-                  {selectedPart.kind === "potentiometer"
-                    ? "Current into end 1"
-                    : "Current"}
-                </dt>
-                <dd>
-                  {selectedReading
-                    ? formatValue(selectedReading.current, "A")
-                    : "—"}
-                </dd>
-              </div>
-              <div>
-                <dt>Power</dt>
-                <dd>
-                  {selectedReading
-                    ? formatValue(selectedReading.power, "W")
-                    : "—"}
-                </dd>
-              </div>
-              {selectedReading?.terminalCurrents && (
+              {selectedPart.meterMode === "resistance" ? (
+                <div>
+                  <dt>Resistance</dt>
+                  <dd>
+                    {formatValue(selectedReading?.resistance ?? NaN, "Ω")}
+                  </dd>
+                </div>
+              ) : (
                 <>
                   <div>
-                    <dt>Current into wiper</dt>
+                    <dt>Voltage drop</dt>
                     <dd>
-                      {formatValue(selectedReading.terminalCurrents.w, "A")}
+                      {selectedReading
+                        ? formatValue(selectedReading.voltage, "V")
+                        : "—"}
                     </dd>
                   </div>
                   <div>
-                    <dt>Current into end 2</dt>
+                    <dt>
+                      {selectedPart.kind === "potentiometer"
+                        ? "Current into end 1"
+                        : "Current"}
+                    </dt>
                     <dd>
-                      {formatValue(selectedReading.terminalCurrents.b, "A")}
+                      {selectedReading
+                        ? formatValue(selectedReading.current, "A")
+                        : "—"}
                     </dd>
                   </div>
+                  <div>
+                    <dt>Power</dt>
+                    <dd>
+                      {selectedReading
+                        ? formatValue(selectedReading.power, "W")
+                        : "—"}
+                    </dd>
+                  </div>
+                  {selectedReading?.terminalCurrents && (
+                    <>
+                      <div>
+                        <dt>Current into wiper</dt>
+                        <dd>
+                          {formatValue(selectedReading.terminalCurrents.w, "A")}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Current into end 2</dt>
+                        <dd>
+                          {formatValue(selectedReading.terminalCurrents.b, "A")}
+                        </dd>
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </dl>
@@ -317,7 +329,9 @@ export function Inspector({
                 : selectedPart.kind === "multimeter"
                   ? selectedPart.meterMode === "current"
                     ? "Ideal zero-voltage ammeter. Insert in series; across a supply it creates a short circuit. Positive current enters the + probe."
-                    : "Ideal DC voltage measurement across + and −. No current is drawn."
+                    : selectedPart.meterMode === "resistance"
+                      ? "Connect across an unpowered resistive network. OL indicates an open path."
+                      : "Ideal DC voltage measurement across + and −. No current is drawn."
                   : selectedPart.kind === "potentiometer"
                     ? "Two resistive sections follow the wiper. Loading the wiper changes the divider voltage. At an end stop, currents through coincident pins are unavailable."
                     : selectedPart.kind === "resistor"

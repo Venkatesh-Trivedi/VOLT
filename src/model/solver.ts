@@ -153,10 +153,6 @@ export function simulate(circuit: Circuit): Simulation {
   if (result.diagnostics.some((d) => d.level === "error"))
     return { ...result, valid: false };
   const supplies = sources.filter((p) => p.kind !== "multimeter");
-  if (!supplies.length) {
-    diagnostic("info", "Add a battery or DC supply to power this circuit.");
-    return result;
-  }
   // Each isolated electrical island needs its own reference; unused breadboard nodes do not enter the matrix.
   const islands = new UnionFind();
   const used = new Set<string>();
@@ -165,6 +161,76 @@ export function simulate(circuit: Circuit): Simulation {
     used.add(a);
     used.add(b);
     islands.join(a, b);
+  }
+  const ohmmeters = circuit.parts.filter(
+    (p) => p.kind === "multimeter" && p.meterMode === "resistance",
+  );
+  for (const meter of ohmmeters) {
+    const [a, b] = terminals(meter);
+    const island = islands.find(a);
+    const touchesProbeIsland = (node: string) =>
+      islands.find(node) === island || islands.find(node) === islands.find(b);
+    if (supplies.some((p) => terminals(p).some(touchesProbeIsland))) {
+      diagnostic(
+        "warning",
+        `${meter.label}: disconnect power sources from the measured network.`,
+      );
+      continue;
+    }
+    if (
+      [...diodes, ...currentMeters, ...unsupported].some((p) =>
+        pins(p).some((pin) => touchesProbeIsland(net[`${p.id}:${pin.id}`])),
+      )
+    ) {
+      diagnostic(
+        "warning",
+        `${meter.label}: resistance mode requires a passive resistor, potentiometer, and switch network.`,
+      );
+      continue;
+    }
+    let resistance = a === b ? 0 : Infinity;
+    if (a !== b && island === islands.find(b)) {
+      // Ground the negative probe and inject 1 A so the solved voltage equals resistance.
+      const nodes = [...used].filter(
+        (n) => n !== b && islands.find(n) === island,
+      );
+      const index = new Map(nodes.map((n, i) => [n, i]));
+      const matrix = nodes.map(() => nodes.map(() => 0));
+      for (const p of branches) {
+        if (p.kind !== "resistor") continue;
+        const [from, to] = terminals(p);
+        if (from === to) continue;
+        const i = index.get(from),
+          j = index.get(to),
+          conductance = 1 / p.value;
+        if (i !== undefined) matrix[i][i] += conductance;
+        if (j !== undefined) matrix[j][j] += conductance;
+        if (i !== undefined && j !== undefined) {
+          matrix[i][j] -= conductance;
+          matrix[j][i] -= conductance;
+        }
+      }
+      const solution = linearSolve(
+        matrix,
+        nodes.map((n) => Number(n === a)),
+      );
+      if (!solution || solution[index.get(a)!] < 0) {
+        diagnostic("warning", `${meter.label}: the resistance solve failed.`);
+        continue;
+      }
+      resistance = solution[index.get(a)!];
+    }
+    result.readings[meter.id] = {
+      resistance,
+      voltage: NaN,
+      current: NaN,
+      power: NaN,
+    };
+  }
+  if (!supplies.length) {
+    if (!ohmmeters.length)
+      diagnostic("info", "Add a battery or DC supply to power this circuit.");
+    return result;
   }
   const refs = new Map<string, string>();
   for (const p of circuit.parts.filter((p) => p.kind === "ground")) {
@@ -342,7 +408,7 @@ export function simulate(circuit: Circuit): Simulation {
       );
   }
   for (const p of circuit.parts.filter(
-    (p) => p.kind === "multimeter" && p.meterMode !== "current",
+    (p) => p.kind === "multimeter" && (p.meterMode ?? "voltage") === "voltage",
   )) {
     const [a, b] = terminals(p);
     if (used.has(a) && used.has(b) && islands.find(a) === islands.find(b))

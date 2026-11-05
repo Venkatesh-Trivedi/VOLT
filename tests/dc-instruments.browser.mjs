@@ -118,9 +118,27 @@ try {
     await page.$eval('[aria-label="Measurement mode"]', (el) => el.value),
     "current",
   );
+  await load({
+    version: 1,
+    name: "Resistance",
+    parts: [resistor, meter],
+    wires: [wire("VM", "a", "R", "a"), wire("VM", "b", "R", "b")],
+  });
+  await page.click('g[aria-label="VM1 Multimeter; select to edit"]');
+  await page.select('[aria-label="Measurement mode"]', "resistance");
+  await page.click(".run-button");
+  await page.waitForFunction(
+    () =>
+      document.querySelector(".circuit-canvas .meter-value").textContent ===
+      "1.00 kΩ",
+  );
+  assert.match(
+    await page.$eval(".reading-list", (el) => el.textContent),
+    /Resistance1\.00 kΩ/,
+  );
   assert.deepEqual(errors, []);
   console.log(
-    "Live wiper, calculated meter voltage/current, and saved settings browser checks passed.",
+    "Live wiper, voltage, current, resistance, and saved settings browser checks passed.",
   );
 } finally {
   await browser.close();

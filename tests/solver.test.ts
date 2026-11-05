@@ -364,8 +364,69 @@ test("new component settings round-trip and invalid settings are rejected", () =
     );
   }
   const data = JSON.parse(JSON.stringify(c));
-  data.parts[2].meterMode = "resistance";
+  data.parts[2].meterMode = "frequency";
   assert.throws(() => parseCircuit(JSON.stringify(data)), /Invalid component/);
   c.parts[1].value = 0;
   assert.throws(() => parseCircuit(JSON.stringify(c)), /Invalid component/);
+});
+
+test("ohmmeter measures equivalent resistance and distinguishes open and short", () => {
+  const meter = {
+    ...part("multimeter", "M"),
+    meterMode: "resistance" as const,
+  };
+  const c = circuit(
+    [
+      meter,
+      part("resistor", "R1", 1000),
+      part("resistor", "R2", 2000),
+      part("resistor", "R3", 2000),
+    ],
+    [
+      wire("M", "a", "R1", "a"),
+      wire("R1", "b", "R2", "a"),
+      wire("R2", "a", "R3", "a"),
+      wire("R2", "b", "R3", "b"),
+      wire("R3", "b", "M", "b"),
+    ],
+  );
+  close(simulate(parseCircuit(JSON.stringify(c))).readings.M.resistance!, 2000);
+  c.wires.pop();
+  assert.equal(simulate(c).readings.M.resistance, Infinity);
+  c.wires.push(wire("M", "a", "M", "b"));
+  assert.equal(simulate(c).readings.M.resistance, 0);
+});
+
+test("ohmmeter rejects a source connected to either probe island", () => {
+  const c = resistorLoop();
+  c.parts.push({ ...part("multimeter", "M"), meterMode: "resistance" });
+  c.wires.push(wire("M", "a", "R", "a"), wire("M", "b", "R", "b"));
+  const s = simulate(c);
+  assert.equal(s.readings.M, undefined);
+  assert.ok(
+    s.diagnostics.some((d) => /disconnect power sources/.test(d.message)),
+  );
+  close(s.readings.R.current, 0.01);
+  c.wires.splice(0, 2);
+  close(simulate(c).readings.M.resistance!, 1000);
+});
+
+test("ohmmeter uses potentiometer position and open/closed switch topology", () => {
+  const c = circuit(
+    [
+      { ...part("multimeter", "M"), meterMode: "resistance" },
+      { ...part("potentiometer", "P", 10000), wiper: 0.25 },
+      part("switch", "S"),
+    ],
+    [
+      wire("M", "a", "S", "a"),
+      wire("S", "b", "P", "a"),
+      wire("P", "w", "M", "b"),
+    ],
+  );
+  assert.equal(simulate(c).readings.M.resistance, Infinity);
+  c.parts[2].closed = true;
+  close(simulate(c).readings.M.resistance!, 2500);
+  c.parts[1].wiper = 0;
+  assert.equal(simulate(c).readings.M.resistance, 0);
 });

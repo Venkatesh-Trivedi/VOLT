@@ -74,7 +74,7 @@ export const catalog: CatalogItem[] = [
     kind: "multimeter",
     name: "Multimeter",
     category: "Power",
-    description: "DC voltage and series current",
+    description: "DC voltage, series current, and resistance",
     value: 0,
     unit: "",
     supported: true,

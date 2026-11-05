@@ -27,7 +27,7 @@ export interface Part {
   closed: boolean;
   color: string;
   wiper?: number;
-  meterMode?: "voltage" | "current";
+  meterMode?: "voltage" | "current" | "resistance";
 }
 export interface Endpoint {
   part: string;
@@ -62,6 +62,7 @@ export interface CatalogItem {
   prefix: string;
 }
 export interface Reading {
+  resistance?: number;
   voltage: number;
   current: number;
   power: number;

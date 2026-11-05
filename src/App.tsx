@@ -26,6 +26,7 @@ import {
   Info,
   CircuitBoard,
   Grip,
+  Sparkles,
 } from "lucide-react";
 import {
   catalog,
@@ -51,6 +52,7 @@ import { Help } from "./components/Help";
 import { Results } from "./components/Results";
 import { LibraryPreview } from "./components/LibraryPreview";
 import { BuzzerAudio } from "./components/BuzzerAudio";
+import { CircuitAiDialog } from "./components/CircuitAiDialog";
 const categories: Category[] = [
   "All parts",
   "Basics",
@@ -106,6 +108,7 @@ export default function App() {
   const [notice, setNotice] = useState(initial.error);
   const [saved, setSaved] = useState(initial.saved);
   const [help, setHelp] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [bottomTab, setBottomTab] = useState<"readings" | "diagnostics">(
     "readings",
   );
@@ -295,6 +298,7 @@ export default function App() {
   }
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
+      if (aiOpen) return;
       if (help) {
         if (e.key === "Escape") setHelp(false);
         return;
@@ -399,6 +403,10 @@ export default function App() {
           <span className="version-tag">DC workbench</span>
         </div>
         <div className="project-tools">
+          <button className="button quiet" onClick={() => setAiOpen(true)}>
+            <Sparkles size={16} />
+            Build with AI
+          </button>
           <button
             className="icon-button"
             aria-label="New circuit"
@@ -675,6 +683,12 @@ export default function App() {
         </div>
       )}
       {help && <Help onClose={() => setHelp(false)} />}
+      {aiOpen && (
+        <CircuitAiDialog
+          onClose={() => setAiOpen(false)}
+          onLoad={loadExample}
+        />
+      )}
       <input
         ref={fileInput}
         hidden

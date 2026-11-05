@@ -3,3 +3,5 @@ dist/
 *.tsbuildinfo
 .hallmark/shots/
 .hallmark/salt
+.env
+.env.*

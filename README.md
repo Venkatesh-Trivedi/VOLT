@@ -21,6 +21,10 @@ npm run preview
 
 ## Working with a circuit
 
+For prompt-based circuit design, put `OPENAI_API_KEY=your_key_here` in `.env.local` and restart `npm run dev` or `npm run preview`. Open VOLTAGE on localhost, choose **Build with AI**, and describe a circuit, such as “Make a 9 V battery turn on a red LED with a switch.” Review the draft, then choose **Load draft**. You can edit, run, save, or undo it like any other circuit.
+
+Generation uses OpenAI's GPT-5.4 Mini through the local server. The server sends the description to OpenAI and keeps the API key out of the browser. It checks the draft's parts, pin connections, and solver validity before returning it. The local AI endpoint works with the Vite development and preview servers. A static copy of `dist` serves the manual workbench without generation.
+
 - Drag a part from the searchable library onto the bench. Select it to edit its properties, rotate, duplicate, or delete it.
 - Click one pin, then another to create a wire. Choose its color in the wiring controls. Select a wire to inspect or delete it.
 - Move parts freely; attached wire endpoints follow their pins. Use the canvas navigation controls to zoom and pan.

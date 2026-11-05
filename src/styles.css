@@ -34,3 +34,11 @@ html{scrollbar-color:var(--color-border) var(--color-bg)}
 .motor-rotor{transform-box:fill-box;transform-origin:center;animation-name:voltage-spin;animation-timing-function:linear;animation-iteration-count:infinite}
 .buzzer-waves{fill:none;stroke:var(--color-accent);stroke-width:2;stroke-linecap:round;pointer-events:none}
 @keyframes voltage-spin{to{transform:rotate(360deg)}}
+.ai-dialog{position:fixed;inset:0;margin:auto;width:calc(100% - var(--space-32));color:var(--color-ink)}
+.ai-dialog::backdrop{background:var(--color-overlay)}
+.ai-dialog h2{padding-right:var(--space-32)}
+.ai-form,.ai-draft,.ai-error{margin-top:var(--space-16)}
+.ai-dialog textarea{width:100%;resize:vertical;min-height:90px;box-sizing:border-box;font:inherit;line-height:1.5;color:var(--color-ink);background:var(--color-deep);border:1px solid var(--color-field-border);border-radius:5px;padding:var(--space-12)}
+.ai-dialog textarea:focus-visible{outline:2px solid var(--color-focus);outline-offset:3px}
+.ai-draft p,.ai-form p,.ai-draft .button{margin-top:var(--space-8)}
+.ai-dialog .ai-error{color:var(--color-error)}
